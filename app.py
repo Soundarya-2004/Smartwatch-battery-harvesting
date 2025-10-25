@@ -17,6 +17,60 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 gemini_model = genai.GenerativeModel("gemini-2.5-flash")
 
+# Gemini Chat Companion Popup
+class GeminiChatPopup:
+    def __init__(self, master):
+        self.master = master
+        self.chat_history = []
+
+        self.chat_icon = ttk.Button(master, text="🤖", width=3, command=self.open_chat)
+        self.chat_icon.place(relx=0.97, rely=0.95, anchor="center")
+
+    def open_chat(self):
+        self.popup = tk.Toplevel(self.master)
+        self.popup.title("Gemini Chat Companion")
+        self.popup.geometry("500x500")
+        self.popup.configure(bg="#2B2B2B")
+
+        style = ttk.Style()
+        style.configure("TLabel", background="#2B2B2B", foreground="white", font=("Helvetica", 12))
+        style.configure("TButton", background="#000000", foreground="black", font=("Helvetica", 12, "bold"))
+
+        self.history_box = tk.Text(self.popup, wrap=tk.WORD, bg="#1C1C1C", fg="white", font=("Helvetica", 12))
+        self.history_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
+        self.history_box.insert(tk.END, "👋 Hi! Ask me anything about battery care, energy tips, or smartwatch usage.\n\n")
+
+        self.input_box = tk.Text(self.popup, height=3, wrap=tk.WORD, bg="#2B2B2B", fg="white", font=("Helvetica", 12))
+        self.input_box.pack(fill=tk.X, padx=10, pady=(0, 5))
+
+        ask_btn = ttk.Button(self.popup, text="Ask Gemini", command=self.ask_gemini)
+        ask_btn.pack(pady=(0, 10))
+
+    def ask_gemini(self):
+        question = self.input_box.get("1.0", tk.END).strip()
+        self.input_box.delete("1.0", tk.END)
+
+        if not question:
+            self.history_box.insert(tk.END, "⚠️ Please enter a question.\n\n")
+            return
+
+        self.chat_history.append(("User", question))
+        self.history_box.insert(tk.END, f"🧑 You: {question}\n")
+
+        prompt = f"""You're a friendly smartwatch companion. Answer this user question clearly and helpfully:\n\n{question}"""
+
+        try:
+            response = gemini_model.generate_content(prompt)
+            answer = response.text.strip()
+        except Exception as e:
+            answer = "⚠️ Gemini is unavailable. Try again later."
+            print("Gemini error:", e)
+
+        self.chat_history.append(("Gemini", answer))
+        self.history_box.insert(tk.END, f"🤖 Gemini: {answer}\n\n")
+        self.history_box.see(tk.END)
+
+# Main SmartWatch App
 class SmartWatchApp:
     def __init__(self, root):
         self.root = root
@@ -96,6 +150,8 @@ class SmartWatchApp:
 
         download_btn = ttk.Button(main_frame, text="Download Energy Report", style='Download.TButton', command=self.download_report)
         download_btn.pack(pady=10)
+
+        GeminiChatPopup(self.root)  # Add chatbot icon
 
         self.update()
 
@@ -184,31 +240,27 @@ Include 2 helpful tips for improving energy harvesting and 1 caution if KE is to
             charge = ke_change * 3.0
             if self.battery < 100:
                 self.battery = min(100, self.battery + charge)
+                self.harvested = True
+            else:
                 self.harvested = False
 
-        # Track KE history for summary
         self.ke_history.append(self.ke_value)
 
-        # Update UI labels
         self.ke_label.config(text=f"{self.ke_value:.2f}")
         self.battery_label.config(text=f"{self.battery:.1f}%")
 
-        # Update notification
         message = self.generate_notification(self.ke_value)
         self.notification_label.config(text=message)
 
-        # Update chart colors
         ke_color = plt.cm.RdYlGn(self.ke_value / 8)
         bat_color = plt.cm.RdYlGn(self.battery / 100)
         self.battery_line.set_color(bat_color)
         self.ke_line.set_color(ke_color)
 
-        # Update chart titles
         status = 'Charging' if self.harvested else 'Standby'
         self.ax1.set_title(f"Battery: {self.battery:.1f}% | {status}", color='white')
         self.ax2.set_title(f"Kinetic Energy: {self.ke_value:.2f}", color='white')
 
-        # Update chart data
         self.battery_data = np.roll(self.battery_data, -1)
         self.battery_data[-1] = self.battery
         self.battery_line.set_ydata(self.battery_data)
@@ -217,10 +269,7 @@ Include 2 helpful tips for improving energy harvesting and 1 caution if KE is to
         self.ke_data[-1] = self.ke_value
         self.ke_line.set_ydata(self.ke_data)
 
-        # Redraw canvas
         self.canvas.draw()
-
-        # Schedule next update
         self.root.after(500, self.update)
 
 if __name__ == "__main__":
