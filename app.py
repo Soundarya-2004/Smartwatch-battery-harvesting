@@ -24,16 +24,10 @@ class SmartWatchApp:
         self.root.configure(bg='#2B2B2B')
 
         style = ttk.Style()
-        style.configure('Custom.TLabel', background='#2B2B2B', foreground='#FFFFFF', font=('Helvetica', 12))
-        style.configure('Notification.TLabel', background='#1C1C1C', foreground='#FF6666', font=('Helvetica', 12, 'italic'))
-        style.configure('Download.TButton',
-                        background='#000000',
-                        foreground='black',
-                        font=('Helvetica', 12, 'bold'),
-                        padding=6)
-        style.map('Download.TButton',
-                  background=[('active', '#1A1A1A')],
-                  foreground=[('disabled', '#030303')])
+        style.configure('Custom.TLabel', background='#2B2B2B', foreground='#FFFFFF', font=('Helvetica', 14))
+        style.configure('Notification.TLabel', background='#1C1C1C', foreground='#FF6666', font=('Helvetica', 14, 'italic'))
+        style.configure('Download.TButton', background='#000000', foreground='black', font=('Helvetica', 14, 'bold'), padding=6)
+        style.map('Download.TButton', background=[('active', '#1A1A1A')], foreground=[('disabled', '#030303')])
 
         main_frame = ttk.Frame(root, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -43,7 +37,7 @@ class SmartWatchApp:
         self.harvested = False
         self.ke_history = []
 
-        header = ttk.Label(main_frame, text="Smart Watch Energy Monitor", style='Custom.TLabel', font=('Helvetica', 16, 'bold'))
+        header = ttk.Label(main_frame, text="Smart Watch Energy Monitor", style='Custom.TLabel', font=('Helvetica', 18, 'bold'))
         header.pack(pady=10)
 
         metrics_frame = ttk.Frame(main_frame)
@@ -52,13 +46,13 @@ class SmartWatchApp:
         ke_frame = ttk.Frame(metrics_frame)
         ke_frame.pack(side=tk.LEFT, expand=True, padx=10)
         ttk.Label(ke_frame, text="Kinetic Energy", style='Custom.TLabel').pack()
-        self.ke_label = ttk.Label(ke_frame, text=f"{self.ke_value:.2f}", style='Custom.TLabel', font=('Helvetica', 24))
+        self.ke_label = ttk.Label(ke_frame, text=f"{self.ke_value:.2f}", style='Custom.TLabel', font=('Helvetica', 26))
         self.ke_label.pack()
 
         bat_frame = ttk.Frame(metrics_frame)
         bat_frame.pack(side=tk.LEFT, expand=True, padx=10)
         ttk.Label(bat_frame, text="Battery Level", style='Custom.TLabel').pack()
-        self.battery_label = ttk.Label(bat_frame, text=f"{self.battery:.1f}%", style='Custom.TLabel', font=('Helvetica', 24))
+        self.battery_label = ttk.Label(bat_frame, text=f"{self.battery:.1f}%", style='Custom.TLabel', font=('Helvetica', 26))
         self.battery_label.pack()
 
         self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(8, 6))
@@ -97,7 +91,95 @@ class SmartWatchApp:
         download_btn = ttk.Button(main_frame, text="Download Energy Report", style='Download.TButton', command=self.download_report)
         download_btn.pack(pady=10)
 
+        # Chat Icon Button
+        self.chat_icon = tk.Button(self.root, text="💬", font=('Helvetica', 20), bg='#1C1C1C', fg='#FF6666', command=self.show_chat)
+        self.chat_icon.place(relx=0.95, rely=0.95, anchor='se')
+
+        # Chat Frame
+        self.chat_frame = tk.Frame(self.root, bg='#1C1C1C', bd=2, relief='ridge')
+        self.chat_visible = False
+        self.chat_maximized = True
+
+        chat_title = tk.Label(self.chat_frame, text="Ask SmartBot 🤖", bg='#1C1C1C', fg='#FF6666', font=('Helvetica', 16, 'bold'))
+        chat_title.pack(pady=5)
+
+        self.chat_log = tk.Text(self.chat_frame, bg='#2B2B2B', fg='#FFFFFF', font=('Helvetica', 14), wrap='word', state='disabled')
+        self.chat_log.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
+
+        self.loading_label = tk.Label(self.chat_frame, text="", bg='#1C1C1C', fg='#00FF99', font=('Helvetica', 14, 'italic'))
+        self.loading_label.pack(pady=(0, 5))
+
+        entry_frame = tk.Frame(self.chat_frame, bg='#1C1C1C')
+        entry_frame.pack(fill=tk.X, padx=5, pady=(0,5))
+
+        self.chat_entry = tk.Entry(entry_frame, bg='#000000', fg='#FFFFFF', font=('Helvetica', 14))
+        self.chat_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        ask_btn = tk.Button(entry_frame, text="Ask AI", bg='#000000', fg='#00FF99', font=('Helvetica', 14, 'bold'), command=self.handle_chat)
+        ask_btn.pack(side=tk.LEFT, padx=5)
+
+        control_frame = tk.Frame(self.chat_frame, bg='#1C1C1C')
+        control_frame.pack(fill=tk.X, padx=5, pady=(0,5))
+
+        close_btn = tk.Button(control_frame, text="Close", bg='#000000', fg='#FF6666', font=('Helvetica', 14), command=self.toggle_chat)
+        close_btn.pack(side=tk.RIGHT, padx=5)
+
         self.update()
+
+    def show_chat(self):
+        self.chat_visible = True
+        self.chat_maximized = True
+        self.chat_frame.place(relx=1.0, rely=0.0, anchor='ne', relwidth=0.35, relheight=1.0)
+
+    def minimize_chat(self):
+        if self.chat_visible:
+            self.chat_maximized = False
+            self.chat_frame.place(relx=1.0, rely=1.0, anchor='se', relwidth=0.35, relheight=0.3)
+
+    def maximize_chat(self):
+        if self.chat_visible:
+            self.chat_maximized = True
+            self.chat_frame.place(relx=1.0, rely=0.0, anchor='ne', relwidth=0.35, relheight=1.0)
+
+    def toggle_chat(self):
+        self.chat_frame.place_forget()
+        self.chat_visible = False
+
+    def handle_chat(self):
+        user_input = self.chat_entry.get().strip()
+        if not user_input:
+            return
+
+        self.chat_entry.delete(0, tk.END)
+        self.chat_log.config(state='normal')
+        self.chat_log.insert(tk.END, f"You: {user_input}\n")
+        self.chat_log.config(state='disabled')
+        self.chat_log.see(tk.END)
+
+        self.loading_label.config(text="SmartBot is thinking...")
+        self.root.update_idletasks()
+
+        prompt = f"""You're SmartBot, a helpful assistant for smartwatch energy harvesting. Respond concisely and clearly to this question:
+
+        "{user_input}"
+
+        Current battery level: {self.battery:.1f}%
+        Recent kinetic energy: {self.ke_value:.2f}
+        Provide 1 tip or insight if relevant."""
+
+        try:
+            response = gemini_model.generate_content(prompt)
+            reply = response.text.strip()
+        except Exception as e:
+            reply = "⚠️ Sorry, I couldn't process that."
+
+        self.loading_label.config(text="")
+        self.chat_log.config(state='normal')
+        self.chat_log.insert(tk.END, f"SmartBot: {reply}\n\n")
+        self.chat_log.config(state='disabled')
+        self.chat_log.see(tk.END)
+
+
 
     def generate_notification(self, ke_value):
         thresholds = [
